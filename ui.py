@@ -95,16 +95,23 @@ class Window(QWidget):
                 for process in processes:
                     if process.poll() is None:
                         finished = False
+                        break
                 if finished:
                     break
 
-        files_dng = [os.path.join(self.source_folder, f) for f in os.listdir(self.source_folder) if
-                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('dng')]
+        files_dng = {os.path.join(self.source_folder, f): '' for f in os.listdir(self.source_folder) if
+                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('dng')}
 
-        for files in (files_dng[pos:pos + chunk_size] for pos in range(0, len(files_dng), chunk_size)):
+        # for files in (files_dng[pos:pos + chunk_size] for pos in range(0, len(files_dng), chunk_size)):
+        for files in (files_cr2[pos:pos + chunk_size] for pos in range(0, len(files_cr2), chunk_size)):
             processes = []
             for file in files:
-                p = Popen(args=[self.dng_converter_path, '-c', file], stdout=PIPE)
+                # file = os.path.basename(file)
+                file, ext = os.path.splitext(file)
+                if file + '.DNG' in files_dng:
+                    p = Popen(args=[self.dng_converter_path, '-c', file + '.dng'], stdout=PIPE)
+                else:
+                    p = Popen(args=[self.dng_converter_path, '-c', file + ext], stdout=PIPE)
                 processes.append(p)
             while True:
                 time.sleep(1)
@@ -115,9 +122,17 @@ class Window(QWidget):
                 if finished:
                     break
 
-        for file in files_dng:
-            os.remove(file)
-            os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
+        # for file in files_dng:
+        #     os.remove(file)
+        #     os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
+
+        for file in files_cr2:
+            file_name, ext = os.path.splitext(file)
+            if file_name + '.DNG' in files_dng:
+                os.remove(file_name + '.DNG')
+                os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
+            else:
+                pass
 
         print('Finished:', datetime.datetime.now(), t1 - datetime.datetime.now())
 
