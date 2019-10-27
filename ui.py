@@ -1,7 +1,11 @@
+import datetime
+import multiprocessing
 import os
 import sys
+import time
+from subprocess import Popen, PIPE
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QObject
 from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QWidget
 
 
@@ -14,42 +18,52 @@ class Window(QWidget):
         self.setWindowTitle("DNG Converter")
         self.setGeometry(600, 300, 600, 300)
 
-        self.make_exe_labels()
+        self._make_exe_labels()
 
-        self.make_button('Source Folder', self.set_source, 10, 50, 100, 30)
-        self.make_button('Destination Folder', self.set_destination, 10, 80, 100, 30)
+        self._make_folder_button('Source Folder', self._set_source, 10, 50, 100, 30)
+        self._make_folder_button('Destination Folder', self._set_destination, 10, 80, 100, 30)
+        self._make_submit_button('Process', 10, 110, 100, 30)
 
-
-
-        button = QPushButton('test', self)
-        button.setGeometry(100, 100, 100, 100)
-        button.clicked.connect(self.print_stuff)
-
-    def print_stuff(self):
-        print(self.source_folder, self.destination_folder)
-
-    def get_folder_closure(self, folder):
+    def _get_folder__closure(self, folder):
         def get_folder():
-            dialog = QFileDialog(self)
-            dialog.setFileMode(QFileDialog.AnyFile)
-            dialog.setViewMode(QFileDialog.List)
-            if dialog.exec_():
-                folder(dialog.selectedFiles())
+            # dir = QFileDialog.getExistingDirectory(self, QObject.tr("Open Directory"),
+            #                                        "/home",
+            #                                        QFileDialog.ShowDirsOnly
+            #                                        | QFileDialog.DontResolveSymlinks)
+            dir = QFileDialog.getExistingDirectory(self)
+            folder(dir)
+            # dialog = QFileDialog(self)
+            # dialog.setFileMode(QFileDialog.AnyFile)
+            # dialog.setViewMode(QFileDialog.List)
+            # if dialog.exec_():
+            #     folder(dialog.selectedFiles())
+
         return get_folder
 
-    def set_source(self, val):
-        self.source_folder = val
+    def _set_source(self, val):
+        self.source_folder = self._process_selection(val)
 
-    def set_destination(self, val):
-        self.destination_folder = val
+    def _set_destination(self, val):
+        self.destination_folder = self._process_selection(val)
 
-    def make_button(self, label, folder, x, y, w, h):
+    def _process_selection(self, val):
+        # val = val[0]
+        # if os.path.isfile(val):
+        #     val = os.path.dirname(val)
+        return val
+
+    def _make_folder_button(self, label, folder_assigner, x, y, w, h):
         button = QPushButton(label, self)
         button.setGeometry(x, y, w, h)
-        dialog = self.get_folder_closure(folder)
+        dialog = self._get_folder__closure(folder_assigner)
         button.clicked.connect(dialog)
 
-    def make_exe_labels(self):
+    def _make_submit_button(self, label, x, y, w, h):
+        button = QPushButton(label, self)
+        button.setGeometry(x, y, w, h)
+        button.clicked.connect(self._process_images)
+
+    def _make_exe_labels(self):
         self.cr2hdr_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dependencies', 'cr2hdr.exe')
         cr2hdr_path_label = QLabel(self)
         cr2hdr_path_label.setText(self.cr2hdr_path)
@@ -62,12 +76,57 @@ class Window(QWidget):
         dng_converter_path_label.setGeometry(10, 30, 600, 10)
         dng_converter_path_label.setAlignment(Qt.AlignBottom | Qt.AlignLeft)
 
+    def _process_images(self):
+        t1 = datetime.datetime.now()
+        print(self.source_folder, self.destination_folder)
+
+        files_cr2 = [os.path.join(self.source_folder, f) for f in os.listdir(self.source_folder) if
+                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('cr2')]
+
+        chunk_size = multiprocessing.cpu_count() - 1
+        for files in (files_cr2[pos:pos + chunk_size] for pos in range(0, len(files_cr2), chunk_size)):
+            processes = []
+            for file in files:
+                p = Popen(args=[self.cr2hdr_path, file], stdout=PIPE)
+                processes.append(p)
+            while True:
+                time.sleep(1)
+                finished = True
+                for process in processes:
+                    if process.poll() is None:
+                        finished = False
+                if finished:
+                    break
+
+        files_dng = [os.path.join(self.source_folder, f) for f in os.listdir(self.source_folder) if
+                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('dng')]
+
+        for files in (files_dng[pos:pos + chunk_size] for pos in range(0, len(files_dng), chunk_size)):
+            processes = []
+            for file in files:
+                p = Popen(args=[self.dng_converter_path, '-c', file], stdout=PIPE)
+                processes.append(p)
+            while True:
+                time.sleep(1)
+                finished = True
+                for process in processes:
+                    if process.poll() is None:
+                        finished = False
+                if finished:
+                    break
+
+        for file in files_dng:
+            os.remove(file)
+            os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
+
+        print('Finished:', datetime.datetime.now(), t1 - datetime.datetime.now())
+
 
 app = QApplication(sys.argv)
 window = Window()
 window.show()
 
-label = QLabel("<font color=red size=40>Hello World!</font>")
+# label = QLabel("<font color=red size=40>Hello World!</font>")
 
 # label.show()
 
