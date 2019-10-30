@@ -1,9 +1,10 @@
 import datetime
 import multiprocessing
 import os
+from shutil import copy2
+from subprocess import Popen, PIPE, check_output
 import sys
 import time
-from subprocess import Popen, PIPE, check_output
 
 from PySide2.QtCore import Qt, QObject
 from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QWidget
@@ -37,25 +38,18 @@ class Window(QWidget):
 
     def _get_folder__closure(self, folder):
         def get_folder():
-            # dir = QFileDialog.getExistingDirectory(self, QObject.tr("Open Directory"),
-            #                                        "/home",
-            #                                        QFileDialog.ShowDirsOnly
-            #                                        | QFileDialog.DontResolveSymlinks)
             dir = QFileDialog.getExistingDirectory(self, dir='C:\\Users\\chadd\\Desktop\\test_images')
             folder(dir)
-            # dialog = QFileDialog(self)
-            # dialog.setFileMode(QFileDialog.AnyFile)
-            # dialog.setViewMode(QFileDialog.List)
-            # if dialog.exec_():
-            #     folder(dialog.selectedFiles())
 
         return get_folder
 
     def _set_source(self, val):
-        self.source_folder = self._process_selection(val)
+        # self.source_folder = self._process_selection(val)
+        self.source_folder = val
 
     def _set_destination(self, val):
-        self.destination_folder = self._process_selection(val)
+        # self.destination_folder = self._process_selection(val)
+        self.destination_folder = val
 
     def _process_selection(self, val):
         # val = val[0]
@@ -92,7 +86,12 @@ class Window(QWidget):
         print(self.source_folder, self.destination_folder)
 
         files_cr2 = [os.path.join(self.source_folder, f) for f in os.listdir(self.source_folder) if
-                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('cr2')]
+                     f.lower().endswith('.cr2')]
+
+        [copy2(f, self.destination_folder) for f in files_cr2]
+
+        files_cr2 = [os.path.join(self.destination_folder, f) for f in os.listdir(self.destination_folder) if
+                     f.lower().endswith('.cr2')]
 
         chunk_size = multiprocessing.cpu_count() - 1
         processes = []
@@ -103,8 +102,8 @@ class Window(QWidget):
 
         _wait(processes, -1)
 
-        files_dng = {os.path.join(self.source_folder, f): '' for f in os.listdir(self.source_folder) if
-                     os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('dng')}
+        files_dng = [os.path.join(self.destination_folder, f) for f in os.listdir(self.destination_folder)
+                     if f.lower().endswith('.dng')]
 
         processes = []
         for file in files_cr2:
@@ -116,17 +115,12 @@ class Window(QWidget):
             processes.append(p)
             processes = _wait(processes, chunk_size)
 
-        # for file in files_dng:
-        #     os.remove(file)
-        #     os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
-
-        for file in files_cr2:
+        for file in files_dng:
             file_name, ext = os.path.splitext(file)
-            if file_name + '.DNG' in files_dng:
-                os.remove(file_name + '.DNG')
-                os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
-            else:
-                pass
+            os.remove(file_name + '.DNG')
+            os.rename(file[:-4] + '_1.dng', file[:-4] + '.dng')
+
+        [os.remove(f) for f in files_cr2]
 
         print('Finished:', datetime.datetime.now(), t1 - datetime.datetime.now())
 
