@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE, check_output
 import sys
 import time
 
-from PySide2.QtCore import Qt, QObject
+from PySide2.QtCore import Qt, QObject, QSettings
 from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QWidget
 
 
@@ -32,35 +32,34 @@ class Window(QWidget):
 
         self._make_exe_labels()
 
-        self._make_folder_button('Source Folder', self._set_source, 10, 50, 100, 30)
-        self._make_folder_button('Destination Folder', self._set_destination, 10, 80, 100, 30)
+        self.default_values = QSettings('Brilliant Imagery', 'CR2 Processor')
+
+        self._make_folder_button('Source Folder', self._set_source, True, 10, 50, 100, 30)
+        self._make_folder_button('Destination Folder', self._set_destination, False, 10, 80, 100, 30)
         self._make_submit_button('Process', 10, 110, 100, 30)
 
-    def _get_folder__closure(self, folder):
+    def _get_folder__closure(self, folder, is_source):
+        if is_source:
+            reference_folder = self.default_values.value('source_folder')
+        else:
+            reference_folder = self.default_values.value('destination_folder')
+
         def get_folder():
-            dir = QFileDialog.getExistingDirectory(self, dir='C:\\Users\\chadd\\Desktop\\test_images')
+            dir = QFileDialog.getExistingDirectory(self, dir=reference_folder)
             folder(dir)
 
         return get_folder
 
     def _set_source(self, val):
-        # self.source_folder = self._process_selection(val)
         self.source_folder = val
 
     def _set_destination(self, val):
-        # self.destination_folder = self._process_selection(val)
         self.destination_folder = val
 
-    def _process_selection(self, val):
-        # val = val[0]
-        # if os.path.isfile(val):
-        #     val = os.path.dirname(val)
-        return val
-
-    def _make_folder_button(self, label, folder_assigner, x, y, w, h):
+    def _make_folder_button(self, label, folder_assigner, is_source, x, y, w, h):
         button = QPushButton(label, self)
         button.setGeometry(x, y, w, h)
-        dialog = self._get_folder__closure(folder_assigner)
+        dialog = self._get_folder__closure(folder_assigner, is_source)
         button.clicked.connect(dialog)
 
     def _make_submit_button(self, label, x, y, w, h):
@@ -84,6 +83,8 @@ class Window(QWidget):
     def _process_images(self):
         t1 = datetime.datetime.now()
         print(self.source_folder, self.destination_folder)
+        self.default_values.setValue('source_folder', self.source_folder)
+        self.default_values.setValue('destination_folder', self.destination_folder)
 
         files_cr2 = [os.path.join(self.source_folder, f) for f in os.listdir(self.source_folder) if
                      f.lower().endswith('.cr2')]
