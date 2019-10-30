@@ -3,10 +3,21 @@ import multiprocessing
 import os
 import sys
 import time
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output
 
 from PySide2.QtCore import Qt, QObject
 from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QWidget
+
+
+def _wait(processes, chunk_size):
+    while True:
+        processes = [p for p in processes if p.poll() is None]
+        if len(processes) >= chunk_size and processes:
+            time.sleep(1)
+        else:
+            break
+
+    return processes
 
 
 class Window(QWidget):
@@ -30,7 +41,7 @@ class Window(QWidget):
             #                                        "/home",
             #                                        QFileDialog.ShowDirsOnly
             #                                        | QFileDialog.DontResolveSymlinks)
-            dir = QFileDialog.getExistingDirectory(self)
+            dir = QFileDialog.getExistingDirectory(self, dir='C:\\Users\\chadd\\Desktop\\test_images')
             folder(dir)
             # dialog = QFileDialog(self)
             # dialog.setFileMode(QFileDialog.AnyFile)
@@ -84,43 +95,26 @@ class Window(QWidget):
                      os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('cr2')]
 
         chunk_size = multiprocessing.cpu_count() - 1
-        for files in (files_cr2[pos:pos + chunk_size] for pos in range(0, len(files_cr2), chunk_size)):
-            processes = []
-            for file in files:
-                p = Popen(args=[self.cr2hdr_path, file], stdout=PIPE)
-                processes.append(p)
-            while True:
-                time.sleep(1)
-                finished = True
-                for process in processes:
-                    if process.poll() is None:
-                        finished = False
-                        break
-                if finished:
-                    break
+        processes = []
+        for file in files_cr2:
+            p = Popen(args=[self.cr2hdr_path, file], stdout=PIPE)
+            processes.append(p)
+            processes = _wait(processes, chunk_size)
+
+        _wait(processes, -1)
 
         files_dng = {os.path.join(self.source_folder, f): '' for f in os.listdir(self.source_folder) if
                      os.path.isfile(os.path.join(self.source_folder, f)) and f[-3:].lower().endswith('dng')}
 
-        # for files in (files_dng[pos:pos + chunk_size] for pos in range(0, len(files_dng), chunk_size)):
-        for files in (files_cr2[pos:pos + chunk_size] for pos in range(0, len(files_cr2), chunk_size)):
-            processes = []
-            for file in files:
-                # file = os.path.basename(file)
-                file, ext = os.path.splitext(file)
-                if file + '.DNG' in files_dng:
-                    p = Popen(args=[self.dng_converter_path, '-c', file + '.dng'], stdout=PIPE)
-                else:
-                    p = Popen(args=[self.dng_converter_path, '-c', file + ext], stdout=PIPE)
-                processes.append(p)
-            while True:
-                time.sleep(1)
-                finished = True
-                for process in processes:
-                    if process.poll() is None:
-                        finished = False
-                if finished:
-                    break
+        processes = []
+        for file in files_cr2:
+            file, ext = os.path.splitext(file)
+            if file + '.DNG' in files_dng:
+                p = Popen(args=[self.dng_converter_path, '-c', file + '.dng'], stdout=PIPE)
+            else:
+                p = Popen(args=[self.dng_converter_path, '-c', file + ext], stdout=PIPE)
+            processes.append(p)
+            processes = _wait(processes, chunk_size)
 
         # for file in files_dng:
         #     os.remove(file)
