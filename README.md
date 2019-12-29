@@ -16,7 +16,8 @@ Clone the reposatory to a working directory.
 $ git clone https://github.com/brilliantimagery/CR2_Preprocessor.git
 ```
 
-From the top level within the project, create the virtual environment and install the dependencies.
+
+From the top level within the project (from within the `CR2_Preprocessor` folder that has the `README.md` file it it), create the virtual environment and install the dependencies.
 
 ```
 $ pipenv install
@@ -26,7 +27,7 @@ $ pipenv install
 
 ## Run the App
 
-From the top level within the project, start the virtual environment.
+From the top level of the project, activate the virtual environment.
 
 ```
 $ pipenv shell
@@ -43,6 +44,20 @@ Set the location of the "Adobe DNG Converter.exe" file.
 Set the location of the files that are to be converted.
 
 Set the location of where the output file are to be saved to.
+
+## Compiling for Distribution
+The app along with all required supporting parts can be gathered into one distributable folder using PyInstaller.
+
+With the pipenv shell activated run:
+
+```
+$ pytest ui.spec
+```
+
+The `CR2_Preprocessor` folder from within the `dist` folder can be used as a standalone distribution. To run the app, run `CR2_Preprocessor.exe` from within the `CR2_Prepocessor` folder.
+
+[Adobe DNG Converter](https://helpx.adobe.com/photoshop/using/adobe-dng-converter.html) still needs to be installed to a known location.
+
 
 ## Testing
 Being a small stop-gap project, there isn't currently any testing. If people start using it, that'll likely change.
