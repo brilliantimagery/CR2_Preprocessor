@@ -1,10 +1,10 @@
 # CR2 Preprocessor
-Moves, batch process, and compresses [dual-iso](https://www.magiclantern.fm/forum/?topic=7139.0) cr2 raw image files.
+Moves, batch process, and losslessly compresses [dual-iso](https://www.magiclantern.fm/forum/?topic=7139.0) cr2 raw image files.
 
 ## Installation
 See [Brilliant Imagery](http://www.brilliantimagery.org/) for more info and binaries (versions of the software that you can just double click to run rather than setup) (hopefully it'll be up by the time you see this).
 
-If you don't already have `pipenv`, install it. Note, it shouldn't be installed into a vertual environment.
+If you don't already have `pipenv`, install it. Note, it shouldn't be installed into a virtual environment.
 
 ```
 $ pip install pipenv

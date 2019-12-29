@@ -107,6 +107,7 @@ class Window(QWidget):
     def _process_images(self):
         t1 = datetime.datetime.now()
         print(self.source_folder, self.destination_folder)
+        print(self.dng_converter_path, self.cr2hdr_path)
         self.default_values.setValue(self.default_converter_path_name, self.dng_converter_path)
         self.default_values.setValue(self.default_source_folder_name, self.source_folder)
         self.default_values.setValue(self.default_destination_folder_name, self.destination_folder)
@@ -140,6 +141,8 @@ class Window(QWidget):
                 p = Popen(args=[self.dng_converter_path, '-c', file + ext], stdout=PIPE)
             processes.append(p)
             processes = _wait(processes, chunk_size)
+
+        _wait(processes, -1)
 
         for file in files_dng:
             file_name, ext = os.path.splitext(file)
