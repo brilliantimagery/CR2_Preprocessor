@@ -7,7 +7,7 @@ import sys
 import time
 
 from PySide2.QtCore import Qt, QSettings
-from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QWidget, QTextEdit
+from PySide2.QtWidgets import QApplication, QFileDialog, QPushButton, QWidget, QTextEdit
 
 
 def _wait(processes, chunk_size):
